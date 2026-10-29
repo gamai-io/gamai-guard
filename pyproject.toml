@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gamai-guard"
+version = "1.0.0"
+description = "Multilingual prompt-injection guard: lexical + embedding cascade with a false-positive brake"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = []
+
+[project.scripts]
+gamai-guard = "gamai_guard.cli:main"
+gamai-guard-worker = "gamai_guard.worker:main"
+
+[tool.setuptools]
+packages = ["gamai_guard", "gamai_guard.tests"]
