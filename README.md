@@ -1,3 +1,5 @@
+[![CI](https://github.com/gamai-io/gamai-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/gamai-io/gamai-guard/actions/workflows/ci.yml)
+
 # gamAI Guard
 
 **A multilingual prompt-injection guard with a false-positive brake.**
