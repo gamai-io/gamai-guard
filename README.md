@@ -1,5 +1,7 @@
 [![PyPI](https://img.shields.io/pypi/v/gamai-guard.svg)](https://pypi.org/project/gamai-guard/)
 [![CI](https://github.com/gamai-io/gamai-guard/actions/workflows/ci.yml/badge.svg)](https://github.com/gamai-io/gamai-guard/actions/workflows/ci.yml)
+
+> **Live evidence dashboard:** https://gamai-io.github.io/demo/
 > **Install:** `pip install gamai-guard`
 
 # gamAI Guard
