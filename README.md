@@ -106,6 +106,15 @@ Corpus and results are in `bench/` (`blind_multilingual.jsonl`,
 Run the worker on localhost or behind a private network. It does not authenticate callers.
 See `SECURITY.md`.
 
+## Large-N validation (EuroHPC LUMI, 2026-11-01)
+
+Generated multilingual corpus (de/fr/es/bs/hr): **6,900 items** (5,910 attacks + 990 benign), bge-m3 cascade on one GPU (MI250X):
+
+- **block rate 79.6%** (4,704/5,910), **false-positive rate 0.1%** (1/990).
+- per class: tool 99.7% · memory 99.7% · secrecy 99.3% · override 93.9% · role 86.2% · **exfil 51.2% (weakest)**.
+
+The 40-item blind set above is not a proxy for scale — that is why results are reported per class. Reproduce: `trust/f3/sbatch-f3-guard.sh` (EHPC eurohpc-project).
+
 ## License
 
 Apache-2.0. Vendored `immunity.py`, `effect_lease.py`, `lease_proof.py` and `safe_exec.py`
