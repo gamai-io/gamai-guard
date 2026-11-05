@@ -6,6 +6,8 @@
 
 # gamAI Guard
 
+> **ProofGate Runtime v0.1** includes a lite lexical injection pre-filter: [`proofgate-runtime`](https://github.com/gamai-io/proofgate-runtime). This repo is the full multilingual embedding cascade.
+
 **A multilingual prompt-injection guard with a false-positive brake.**
 
 Lexical matching catches known English/Bosnian patterns. Everything else goes through an
