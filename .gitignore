@@ -5,3 +5,13 @@ build/
 dist/
 .venv/
 runs/
+
+# gama-secrets-guard
+.env
+*.token
+*.key
+*.pem
+tenants.json
+.git-credentials
+__pycache__/
+*.pyc
