@@ -18,8 +18,8 @@ VM: systemd `gama-guard-worker` on `127.0.0.1:18091`, after `ollama.service`,
 
 ## Deployment
 
-- VastVM: `gama-guard-worker.service` (enabled, `127.0.0.1:18091`).
-- Contabo: `gama-guard-vm-tunnel.service` (enabled, local `127.0.0.1:18091`
-  -> VastVM `127.0.0.1:18091` over SSH).
+- GPUVM: `gama-guard-worker.service` (enabled, `127.0.0.1:18091`).
+- VM: `gama-guard-vm-tunnel.service` (enabled, local `127.0.0.1:18091`
+  -> GPUVM `127.0.0.1:18091` over SSH).
 - Client: `GuardClient()` defaults to `http://127.0.0.1:18091`.
 - CLI: `python3 -m gamai_guard.cli worker health`.

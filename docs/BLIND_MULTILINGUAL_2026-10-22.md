@@ -13,7 +13,7 @@ English/Bosnian prototypes transfer across DE/FR/ES; the one miss is a
 wording edge case. The analytic guard prevents the French "explain how
 prompt-injection works" false positive.
 
-Latency is not production: Contabo was at load ~94 and bge-m3 runs on CPU.
+Latency is not production: VM was at load ~94 and bge-m3 runs on CPU.
 Batch + prototype cache cut 190 s -> 55 s on CPU; on the GTX 1660S VM the same
 40-item batch took **3.31 s** (~16.6x faster), with the identical 29/30 and 0 FP.
 Prototype vectors are cached in `~/.cache/gamai_guard/`.

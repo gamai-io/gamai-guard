@@ -6,6 +6,8 @@
 
 # gamAI Guard
 
+> **ProofGate Runtime v0.1** includes a lite lexical injection pre-filter: [`proofgate-runtime`](https://github.com/gamai-io/proofgate-runtime). This repo is the full multilingual embedding cascade.
+
 **A multilingual prompt-injection guard with a false-positive brake.**
 
 Lexical matching catches known English/Bosnian patterns. Everything else goes through an
@@ -113,7 +115,7 @@ Generated multilingual corpus (de/fr/es/bs/hr): **6,900 items** (5,910 attacks +
 - **block rate 79.6%** (4,704/5,910), **false-positive rate 0.1%** (1/990).
 - per class: tool 99.7% · memory 99.7% · secrecy 99.3% · override 93.9% · role 86.2% · **exfil 51.2% (weakest)**.
 
-The 40-item blind set above is not a proxy for scale — that is why results are reported per class. Reproduce: `trust/f3/sbatch-f3-guard.sh` (EHPC project_465003647).
+The 40-item blind set above is not a proxy for scale — that is why results are reported per class. Reproduce: `trust/f3/sbatch-f3-guard.sh` (EHPC eurohpc-project).
 
 ## License
 
