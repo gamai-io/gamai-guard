@@ -126,7 +126,11 @@ Generated multilingual corpus (de/fr/es/bs/hr): **6,900 items** (5,910 attacks +
 - **block rate 79.6%** (4,704/5,910), **false-positive rate 0.1%** (1/990).
 - per class: tool 99.7% · memory 99.7% · secrecy 99.3% · override 93.9% · role 86.2% · **exfil 51.2% (weakest)**.
 
-The 40-item blind set above is not a proxy for scale — that is why results are reported per class. Reproduce: `trust/f3/sbatch-f3-guard.sh` (EHPC eurohpc-project).
+The 40-item blind set above is not a proxy for scale — that is why results are reported per class.
+**Not reproducible from this repository yet:** the 6,900-item corpus and the SLURM script
+(`trust/f3/sbatch-f3-guard.sh`, referenced earlier) are not shipped here, and `RELEASE_v1.3.0.md`
+states the corpus is "not included". Treat the 79.6% / 0.1% row as self-reported until the corpus
+is published. What *is* reproducible here: `python3 bench/eval_blind.py` (40 items).
 
 ## License
 
