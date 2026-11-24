@@ -4,10 +4,24 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gamai-guard"
-version = "1.0.1"
+version = "1.0.2"
 description = "Multilingual prompt-injection guard: lexical + embedding cascade with a false-positive brake"
+readme = "README.md"
 requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{name = "Renato Šuster", email = "renato@gamatrade.ba"}]
 dependencies = []
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Topic :: Security",
+]
+
+[project.urls]
+Homepage = "https://github.com/gamai-io/gamai-guard"
+Repository = "https://github.com/gamai-io/gamai-guard"
+Issues = "https://github.com/gamai-io/gamai-guard/issues"
 
 [project.optional-dependencies]
 dev = []

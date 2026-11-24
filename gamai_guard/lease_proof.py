@@ -32,7 +32,7 @@ def make_bundle(lease: dict, report: dict, evidence: dict, key: bytes) -> dict:
 
 
 class Verifier:
-    def __init__(self, key: bytes, audience: str = "protean/vastvm"):
+    def __init__(self, key: bytes, audience: str = "protean/default"):
         self.key = key
         self.audience = audience
         self.seen: set[str] = set()

@@ -66,7 +66,7 @@ def proof_binds_executed_hash():
     f.write_text("echo SAFE\n", encoding="utf-8")
     h = hashlib.sha256(f.read_bytes()).hexdigest()
     lease = {"lease_id": "L1", "genome_hash": "g", "cmd_sha": h,
-             "nonce": "n1", "audience": "protean/vastvm",
+             "nonce": "n1", "audience": "protean/default",
              "exp": time.time() + 60}
     report = {"lease_id": "L1", "genome_hash": "g", "cmd_sha": h,
               "out_sha": "", "status": "confirmed"}
