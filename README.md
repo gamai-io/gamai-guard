@@ -35,6 +35,9 @@ python3 bench/eval_blind.py          # writes bench/blind_multilingual_results.j
 - the embedding row needs a bge-m3 endpoint (we measured on a GTX 1660S); the lexical row runs anywhere
 - verified 2026-11-23: the JSON above matches this table line for line
 
+> **Start here if you are new:** [`gama-mandate`](https://pypi.org/project/gama-mandate/) — sign a business commitment, execute it once, prove it offline.
+> This package is one piece of the same stack: `gama-mandate` (commitments) · `gamai-trust` (verify claims) · `gamai-guard` (injection) · `gamai-plugins` (policy, sandbox, team) · `gama-l` (provable computation).
+
 ## Why a cascade
 
 A single embedding threshold over-blocks. The cascade is:
