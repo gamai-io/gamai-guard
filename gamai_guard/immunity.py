@@ -281,8 +281,9 @@ LEX_QUOTED_OVERRIDE_RE = re.compile(
     r"[\"'][^\"']{0,80}\b(ignore|disregard|forget|override)\b[^\"']{0,80}"
     r"\b(instructions?|rules?|prompt)\b[^\"']{0,80}[\"']", re.I | re.S)
 LEX_TEST_CONTEXT_RE = re.compile(
-    r"\b(test fixture|test result|unit test|rerun|example attack|example|the phrase|"
-    r"the string|quoted|security policy|log it and block|detect|defend)\b", re.I)
+    r"\b(test fixture|test result|unit test|rerun|example attack|example prompt|"
+    r"the phrase|the string|quoted|security policy|log it and block|detect|defend|"
+    r"red team exercise|ctf)\b", re.I)
 LEX_POLICY_CONTEXT_RE = re.compile(
     r"\b(customer|third part|privacy|gdpr|policy says|must not|"
     r"do not disclose (customer|data|personal))\b", re.I)
@@ -374,8 +375,9 @@ def _lex_score(text: str) -> tuple[float, list[str]]:
     if LEX_QUOTED_OVERRIDE_RE.search(n) and LEX_TEST_CONTEXT_RE.search(n):
         score *= 0.2
     elif "instruction_override" in hits and LEX_TEST_CONTEXT_RE.search(n) and not re.search(
-            r"\b(and|then)\s+(send|call|run|execute|write|delete|reveal|print|"
-            r"output|store|persist|approve|skip|disable|ignore|treat)\b|"
+            r"\b(and|then)\s+(send|email|mail|forward|exfiltrate|post|upload|call|run|"
+            r"execute|write|delete|reveal|print|output|store|persist|approve|skip|"
+            r"disable|ignore|treat)\b|"
             r"\b(from now|you are now|instead)\b", n, re.I):
         score *= 0.3
     if "secrecy_pressure" in hits and LEX_POLICY_CONTEXT_RE.search(n):
