@@ -25,6 +25,7 @@ import json
 import os
 import re
 import sqlite3
+import stat
 import sys
 import time
 import unicodedata
@@ -32,7 +33,55 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.environ.get("IMMUNITY_DB") or os.path.join(BASE_DIR, "immunity.db")
+DEFAULT_STATE_DIR = os.path.join(os.path.expanduser("~"), ".local", "state", "gamai-guard")
+DEFAULT_DB_PATH = os.path.join(DEFAULT_STATE_DIR, "antibodies.db")
+
+
+def resolve_db_path(path: str | None = None) -> str:
+    """Resolve the antibody DB path.
+
+    Order: explicit argument, ``GAMAI_GUARD_DB``, legacy ``IMMUNITY_DB``,
+    then ``~/.local/state/gamai-guard/antibodies.db``.  The old module-relative
+    and ``/tmp`` locations are deliberately gone: a shared, predictable path
+    lets any local user rewrite the antibody store and disable detection.
+    """
+    raw = path or os.environ.get("GAMAI_GUARD_DB") or os.environ.get("IMMUNITY_DB") \
+        or DEFAULT_DB_PATH
+    return os.path.abspath(os.path.expanduser(str(raw)))
+
+
+def _prepare_db_file(path: str) -> str:
+    """Create/tighten the DB file and refuse unsafe pre-existing files.
+
+    - parent directory is created 0700 (never world-writable by us)
+    - symlinks and non-regular files are refused (CWE-59)
+    - a world-writable existing file is refused (CWE-377/732)
+    - the database file itself is 0700
+    """
+    parent = os.path.dirname(path) or "."
+    if not os.path.isdir(parent):
+        os.makedirs(parent, mode=0o700, exist_ok=True)
+        try:
+            os.chmod(parent, 0o700)
+        except OSError:
+            pass
+
+    if os.path.islink(path):
+        raise PermissionError("refusing symlinked antibody DB: %s" % path)
+    if os.path.exists(path):
+        st = os.lstat(path)
+        if not stat.S_ISREG(st.st_mode):
+            raise PermissionError("refusing non-regular antibody DB: %s" % path)
+        if st.st_mode & 0o002:
+            raise PermissionError(
+                "refusing world-writable antibody DB (mode %04o): %s"
+                % (stat.S_IMODE(st.st_mode), path))
+    else:
+        # Pre-create with a tight mode so SQLite never creates it 0644.
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o700)
+        os.close(fd)
+    os.chmod(path, 0o700)
+    return path
 
 DECAY_PER_DAY = 0.98
 NEAR_MISS = 0.80
@@ -305,12 +354,55 @@ def sha256(text: str) -> str:
 
 
 def normalize(text: str) -> str:
-    """NFKC + strip invisibles + fold confusables + collapse whitespace."""
+    """NFKC + strip invisibles/combining marks + fold confusables + collapse."""
     s = unicodedata.normalize("NFKC", str(text))
     s = s.translate(_INVISIBLE)
+    # Decompose first: NFKC composes "o" + U+0301 into "ó", which would
+    # otherwise survive the mark filter below.
+    s = unicodedata.normalize("NFD", s)
+    s = "".join(ch for ch in s if not unicodedata.category(ch).startswith("M"))
+    s = unicodedata.normalize("NFC", s)
     s = "".join(_HOMOGLYPHS.get(ch, ch) for ch in s)
     s = s.replace("\r\n", "\n").replace("\r", "\n")
     return re.sub(r"[ \t\f\v]+", " ", s).strip()
+
+
+# Leet/obfuscation folding. Applied only inside the lexical detector; the
+# original text is kept for embedding so semantic similarity is measured on
+# what the user actually wrote.
+_LEET_COMMON = {"0": "o", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s"}
+_LEET_TOKEN_RE = re.compile(r"[0-9a-z@$]+")
+
+
+def _leet_token(tok: str, one: str) -> str:
+    if not any(ch.isalpha() for ch in tok):
+        return tok  # pure numbers/dates are left untouched
+    if not any(ch in "013457@$" for ch in tok):
+        return tok
+    table = dict(_LEET_COMMON)
+    table["1"] = one
+    return "".join(table.get(ch, ch) for ch in tok)
+
+
+def leet_variants(text: str) -> list[str]:
+    """Return lowercase de-leeted variants (``1`` is ambiguous: i and l)."""
+    s = str(text).lower()
+    out: list[str] = []
+    for one in ("i", "l"):
+        v = _LEET_TOKEN_RE.sub(lambda m: _leet_token(m.group(0), one), s)
+        if v not in out:
+            out.append(v)
+    return out
+
+
+def match_variants(text: str) -> list[str]:
+    """Normalized text plus de-obfuscated variants, deduplicated."""
+    base = normalize(text)
+    out = [base]
+    for v in leet_variants(base):
+        if v not in out:
+            out.append(v)
+    return out
 
 
 def canonical(text: str) -> str:
@@ -339,7 +431,7 @@ def _decode_b64_candidates(text: str) -> list[str]:
 
 
 def _lex_score(text: str) -> tuple[float, list[str]]:
-    n = re.sub(r"\s+", " ", normalize(text))
+    n = re.sub(r"\s+", " ", normalize(text)).lower()
     score = 0.0
     hits: list[str] = []
     for cls, rules in LEXICON_RE.items():
@@ -410,7 +502,7 @@ def _decode_payloads(text: str) -> list[str]:
 
 def threat_score(text: str) -> tuple[float, list[str]]:
     """General lexical intent score. Returns (score, matched classes)."""
-    variants = [normalize(text)]
+    variants = match_variants(text)
     if INVISIBLE_RE.search(text or ""):
         variants.append(normalize(INVISIBLE_RE.sub(" ", text)))
     best_score = 0.0
@@ -442,13 +534,21 @@ def _overlap(a: set[str], b: set[str]) -> float:
 # ------------------------------------------------------------------- stores
 class Store:
     def __init__(self, path: str | None = None):
-        self.path = path or DB_PATH
-        os.makedirs(os.path.dirname(os.path.abspath(self.path)), exist_ok=True)
+        self.path = _prepare_db_file(resolve_db_path(path))
         self.db = sqlite3.connect(self.path, timeout=30)
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.executescript(SCHEMA)
         self.db.commit()
+        # WAL/SHM files are created by SQLite with the process umask; tighten
+        # them too, they hold the same antibody data.
+        for suffix in ("-wal", "-shm"):
+            side = self.path + suffix
+            try:
+                if os.path.exists(side):
+                    os.chmod(side, 0o600)
+            except OSError:
+                pass
 
     # ---- taint
     def taint_write(self, topic: str, fact: str, source: str = "agent",
@@ -600,29 +700,37 @@ class Store:
                      args: dict | None = None) -> dict:
         raw = str(text)[:MAX_TEXT]
         norm = normalize(raw)
+        variants = match_variants(raw)
         reasons: list[str] = []
         risk = 0.0
         found_class = None
 
-        # 1) antibody store (exact + near-miss), including base64-decoded payloads
-        for candidate in [norm] + _decode_b64_candidates(norm):
+        # 1) antibody store (exact + near-miss), including de-obfuscated and
+        #    base64-decoded payloads
+        candidates = list(variants)
+        for variant in variants:
+            candidates.extend(_decode_b64_candidates(variant))
+        for candidate in candidates:
             ab, score, how = self.match(candidate)
             if ab:
                 return {"ok": True, "allow": False, "reason": "antibody:%s" % how,
                         "antibody_id": ab["id"], "attack_class": ab["attack_class"],
-                        "score": score, "risk": 1.0, "normalized_sha256": sha256(candidate)}
+                        "score": score, "risk": 1.0, "normalized_sha256": sha256(norm)}
 
-        # 2) pattern library
-        for cls, sev, rx in PATTERN_RE:
-            if rx.search(norm):
-                found_class = found_class or cls
-                reasons.append(cls)
-                risk = max(risk, 0.75 if sev == "med" else 0.95)
-        for dec in _decode_b64_candidates(norm):
+        # 2) pattern library, on the normalized text and every de-leeted variant
+        for variant in variants:
             for cls, sev, rx in PATTERN_RE:
-                if rx.search(normalize(dec)):
-                    reasons.append("encoded:" + cls)
-                    risk = max(risk, 0.85)
+                if rx.search(variant):
+                    found_class = found_class or cls
+                    if cls not in reasons:
+                        reasons.append(cls)
+                    risk = max(risk, 0.75 if sev == "med" else 0.95)
+            for dec in _decode_b64_candidates(variant):
+                for cls, sev, rx in PATTERN_RE:
+                    if rx.search(normalize(dec)):
+                        if "encoded:" + cls not in reasons:
+                            reasons.append("encoded:" + cls)
+                        risk = max(risk, 0.85)
 
         if risk > 0:
             # Quoted/test/policy examples of an override are documentation, not
@@ -763,7 +871,10 @@ def main(argv: list[str]) -> int:
         args = json.load(sys.stdin) if not sys.stdin.isatty() else {}
     except json.JSONDecodeError as exc:
         return emit({"ok": False, "err": "invalid JSON args: %s" % exc}) or 2
-    store = Store()
+    try:
+        store = Store()
+    except (PermissionError, OSError) as exc:
+        return emit({"ok": False, "err": str(exc)}) or 2
     try:
         if tool == "taint_write":
             return emit(store.taint_write(**args))

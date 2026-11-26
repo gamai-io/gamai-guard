@@ -43,7 +43,12 @@ python3 bench/eval_blind.py          # writes bench/blind_multilingual_results.j
 A single embedding threshold over-blocks. The cascade is:
 
 1. **Lexical layer** — deterministic patterns and learned antibodies (`agent-immunity`).
-   Fast, explainable, zero false positives on the benign set.
+   Fast, explainable, zero false positives on the benign set. Text is normalized before
+   matching: case, whitespace, zero-width/combining marks, confusables and common leet
+   substitutions (`0→o`, `1→i/l`, `3→e`, `4→a`, `5→s`, `7→t`, `@→a`, `$→s`). The original
+   text is still what the embedding layer sees. Antibodies live in `GAMAI_GUARD_DB`
+   (default `~/.local/state/gamai-guard/antibodies.db`, mode `0700`); a world-writable
+   store is refused.
 2. **Analytic guard** — a question *about* prompt injection ("explain how prompt injection works")
    is not an attack. This removed the one French false positive.
 3. **Embedding layer** — only when lexical is undecided: cosine similarity against

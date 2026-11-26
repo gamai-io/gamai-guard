@@ -132,11 +132,15 @@ class Cascade:
     def check_many(self, texts: list[str], tool: str = "answer") -> list[dict]:
         results: list[dict | None] = [None] * len(texts)
         pending: list[tuple[int, str]] = []
-        store = I.Store("/tmp/gamai-guard.db")
+        # DB path: GAMAI_GUARD_DB or ~/.local/state/gamai-guard/antibodies.db
+        # (0700, world-writable files refused). Never a shared /tmp path.
+        store = I.Store()
         for i, text in enumerate(texts):
             if ANALYTIC.search(text):
                 results[i] = {"allow": True, "via": "analytic", "score": None}
                 continue
+            # Lexical layer sees normalized/de-obfuscated variants; the original
+            # text below is what gets embedded.
             d = store.shield_check(text, tool=tool)
             if not d["allow"]:
                 results[i] = {"allow": False, "via": "lexical", "reason": d.get("reason")}

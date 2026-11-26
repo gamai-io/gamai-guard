@@ -32,10 +32,14 @@ def main(argv=None) -> int:
         plan = json.loads(a.json)
         print(json.dumps(check(plan, Lease.from_dict(json.loads(a.lease))), indent=2))
     elif a.cmd == "text":
-        if a.worker:
-            print(json.dumps(GuardClient(a.worker).check(a.text), indent=2))
-        else:
-            print(json.dumps(Cascade(a.embed).check(a.text), indent=2))
+        try:
+            if a.worker:
+                print(json.dumps(GuardClient(a.worker).check(a.text), indent=2))
+            else:
+                print(json.dumps(Cascade(a.embed).check(a.text), indent=2))
+        except (PermissionError, OSError) as exc:
+            print(json.dumps({"allow": None, "via": "error", "error": str(exc)}, indent=2))
+            return 2
     elif a.cmd == "worker":
         gc = GuardClient(a.url)
         if a.action == "health":
