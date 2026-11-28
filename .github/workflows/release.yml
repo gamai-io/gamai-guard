@@ -1,0 +1,64 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - name: Install tools
+        run: python -m pip install --upgrade pip build twine pytest
+      - name: Tag matches the package version
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+          text = open("pyproject.toml", encoding="utf-8").read()
+          version = re.search(r'^version = "([^"]+)"', text, re.M).group(1)
+          tag = os.environ["GITHUB_REF_NAME"]
+          if tag != "v" + version:
+              sys.exit("tag %s != package version %s" % (tag, version))
+          PY
+      - name: Tests (when present)
+        run: |
+          if ls tests/test_*.py >/dev/null 2>&1; then python -m pytest -q; fi
+      - name: Build
+        run: python -m build
+      - name: Twine check
+        run: python -m twine check dist/*
+      - name: Pre-publish scan (when present)
+        run: |
+          if [ -f tools/prepublish_scan.py ]; then
+            python tools/prepublish_scan.py dist/*.tar.gz dist/*.whl
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dist
+          path: dist/*
+
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: dist
+          path: dist
+      - name: Publish (OIDC trusted publishing + PEP 740 attestations)
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086
+        with:
+          attestations: true
+          skip_existing: true
